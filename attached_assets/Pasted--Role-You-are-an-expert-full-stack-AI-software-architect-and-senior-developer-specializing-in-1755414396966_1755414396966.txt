@@ -1,0 +1,72 @@
+# **Role:**
+You are an expert full-stack AI software architect and senior developer specializing in **surveillance AI systems**, **backend automation**, and **frontend–backend integration**. You design and implement production-ready applications that use **pretrained video anomaly detection models**.
+
+# **Objective:**
+Build a **real-time surveillance anomaly detection app** that:
+- Uses the **TimeSformer pretrained model** (`Nikeytas/timesformer-best-crime-detector` from Hugging Face).
+- Detects and classifies **crime/anomaly events** in video streams (based on UCF-Crime).
+- Provides **web-based user interface** for monitoring.
+- Runs with **Python backend (FastAPI)** hosted on **Replit**.
+- Uses **Firebase** for authentication, user management, and alert storage.
+- Is modular, scalable, and can be later expanded with new models or data sources.
+
+# **Context:**
+- Datasets available: **UCF-Crime** and **ShanghaiTech** (already downloaded).
+- Pretrained model available: **TimeSformer fine-tuned on UCF-Crime**.
+- Backend environment: **Replit (Python runtime)**.
+- Frontend environment: **React + Tailwind** (deployed either via Replit web or Firebase hosting).
+- Cloud services: **Firebase for auth, Firestore for logs/alerts, Firebase Hosting for frontend**.
+
+# **Instructions:**
+
+## **Instruction 1: Backend (AI Inference Service)**
+- Use **Python + FastAPI** on Replit for the backend.
+- Load pretrained model `Nikeytas/timesformer-best-crime-detector`.
+- Accept video inputs:
+  - **File uploads** (e.g., `.mp4`, `.avi`).
+  - **Live stream chunks** (processed in short intervals).
+- Process frames using **Decord** (or OpenCV fallback).
+- Run inference through TimeSformer → return predicted anomaly/crime type.
+- Expose REST API endpoints:
+  - `/predict` → input video, output `{label, confidence}`.
+  - `/health` → check if service is alive.
+- Add **rate limiting + error handling** for stability.
+
+## **Instruction 2: Frontend (Surveillance Dashboard)**
+- Use **React + Tailwind CSS** for a clean, responsive UI.
+- Features:
+  - **Login/Signup with Firebase Auth**.
+  - **Dashboard** showing live video feeds.
+  - **Prediction results overlayed on video** (crime label + probability).
+  - **Alerts panel** for flagged anomalies.
+  - **History tab** → show past alerts stored in Firestore.
+  - **Settings tab** → manage thresholds, user profile, logout.
+
+## **Instruction 3: Database & Authentication (Firebase)**
+- **Firebase Auth** → email/password login, Google sign-in.
+- **Firestore DB**:
+  - Store alerts as documents `{timestamp, camera_id, anomaly_type, confidence, video_ref}`.
+- **Firebase Storage**:
+  - Save flagged video clips or snapshots for audit.
+- **Security Rules**:
+  - Only authenticated users can view/edit their alerts.
+  - Admin role can view all alerts across feeds.
+
+## **Instruction 4: Integration**
+- Frontend calls **FastAPI backend** endpoints for predictions.
+- Backend pushes **alerts** to Firebase (Firestore + Storage).
+- Frontend fetches alert history from Firestore to show in dashboard.
+- Optionally integrate **WebSockets** for near-real-time updates.
+
+## **Instruction 5: Extra Features**
+- **Threshold setting** → Only raise alerts if probability > X%.
+- **Multi-camera support** → Each camera gets a unique ID.
+- **Notifications** → Push/email alerts via Firebase Cloud Messaging.
+- **Scalability** → Allow easy swapping of models (e.g., VideoMAE, I3D) later.
+- **Deployment** → FastAPI backend runs on Replit; frontend on Firebase Hosting.
+
+# **Notes:**
+- Use **short, low-res video clips** for inference on Replit due to limited compute.
+- For heavier real-time pipelines, later migrate backend to **Paperspace Gradient** or **AWS EC2 with GPU**.
+- Stick to modular code → separate `model.py`, `routes.py`, `firebase.py`, `app.py`.
+- Ensure code is **production-grade, with proper error handling, logging, and testing**.

@@ -1,0 +1,55 @@
+# Role:
+You are an expert full-stack AI engineer building a **real-time surveillance anomaly detection system**.  
+
+# Objective:
+Enhance my existing **React + TypeScript frontend and Node.js backend (with Firebase integration)** by adding a **Python AI microservice** that runs inference using the **TimeSformer pretrained model** from Hugging Face for anomaly detection on surveillance videos.  
+
+# Context:
+- Current stack:
+  - Frontend: React + TypeScript
+  - Backend: Node.js + Express (TypeScript)
+  - Database/Auth: Firebase
+  - Features already implemented: file upload (multer), real-time WebSocket alerts, anomaly tracking, dashboard visualization
+- New requirement: integrate a **Python FastAPI service** that loads the TimeSformer model and provides anomaly detection results.  
+- Data: UCF-Crime and ShanghaiTech datasets already available for fine-tuning if needed, but we’ll first integrate pretrained inference.  
+
+# Instructions:
+
+## Instruction 1: Python AI Microservice
+- Create a Python service using **FastAPI**.  
+- Load the **TimeSformer pretrained model** from Hugging Face.  
+- Implement endpoints:
+  - `/predict` → Accept video/image (POST), run model inference, return anomaly classification + confidence score.  
+  - `/health` → For Node.js to check service availability.  
+- Make sure model is cached on load, not reloaded per request.  
+- Add support for both:
+  - **Real-time frame inference** (streaming or frame sampling from video)  
+  - **Batch file inference** (uploaded video clip).  
+
+## Instruction 2: Node.js Backend Integration
+- Extend the existing **Node.js backend**:
+  - On file upload or live stream input, forward request to Python FastAPI service.  
+  - Receive prediction results and push them via **WebSocket** to the frontend in real-time.  
+  - Store anomaly metadata (type, timestamp, confidence, video reference) in **Firebase**.  
+
+## Instruction 3: Frontend Enhancements
+- Update dashboard to show **AI anomaly predictions** in real-time:  
+  - Confidence scores  
+  - Video timestamps of anomalies  
+  - Alert notifications when anomaly crosses threshold.  
+- Add option to toggle between **TensorFlow.js anomaly detection (existing)** and **TimeSformer AI service (new)**.  
+
+## Instruction 4: Deployment & Security
+- Run Python FastAPI as a separate microservice (can be on Replit, Railway, Render, or Dockerized).  
+- Secure communication between Node.js and Python service with API key or token.  
+- Optimize inference with GPU if available, otherwise ensure efficient CPU fallback.  
+- Use Firebase for:
+  - User authentication (restrict access to dashboard & API)  
+  - Storing logs of detected anomalies.  
+
+# Notes:
+- Use Hugging Face API token if needed to load TimeSformer.  
+- Ensure modular code so future models can be swapped easily.  
+- Prioritize minimal latency for real-time inference.  
+- Keep the system extensible for federated learning later if required.  
+

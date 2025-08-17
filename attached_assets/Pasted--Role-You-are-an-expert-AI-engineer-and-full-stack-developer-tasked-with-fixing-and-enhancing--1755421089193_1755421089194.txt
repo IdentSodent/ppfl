@@ -1,0 +1,52 @@
+# **Role**
+You are an expert AI engineer and full-stack developer tasked with fixing and enhancing my anomaly detection surveillance application.  
+
+# **Objective**
+The goal is to correct existing misclassifications, ensure consistent anomaly detection, properly render output images/videos with bounding boxes, and add the ability to **download the processed outputs** (both photo and video) where anomalies are clearly marked.  
+
+# **Context**
+- I am using a pretrained **TimeSformer model** (with possible finetuning for anomaly classification like burglary, intrusion, fighting, trespassing, weapon detection).  
+- YOLOv10 (or similar object detector) is integrated for **bounding box visualization**.  
+- The app currently:
+  1. Sometimes **mislabels anomalies** (e.g., burglary photo detected as fighting, then trespassing, then "no anomaly" with 35% confidence).  
+  2. Sometimes shows a **blank placeholder image (camera icon)** instead of rendering the processed image.  
+  3. **Confidence scores** are inconsistent across identical inputs.  
+  4. No option exists to **download the anomaly-marked outputs** (image/video with bounding boxes).  
+
+# **Instructions**
+## **Instruction 1: Fix Misclassification**
+- Improve anomaly classification consistency (trespassing, burglary, fighting, weapon possession, loitering, etc.).  
+- If needed, **finetune TimeSformer** with anomaly-specific datasets.  
+- Add fallback logic: if detection confidence is **below a defined threshold (e.g., 50%)**, the app should still display the image but mark it as **"Uncertain / Low Confidence"** instead of wrongly saying *"No anomaly detected."*  
+
+## **Instruction 2: Fix Rendering Issue**
+- Ensure processed images **always render correctly** in the UI (no more blank placeholders with camera icons).  
+- Debug the pipeline between the detection model → post-processing → frontend rendering.  
+
+## **Instruction 3: Add Bounding Box Visualization**
+- Use **YOLOv10 (or equivalent)** for bounding box placement on anomalies.  
+- Ensure bounding boxes are:
+  - **Red for high severity anomalies** (e.g., weapons, burglary, assault).  
+  - **Yellow for medium severity** (trespassing, loitering).  
+  - **Green for low severity** (benign activity flagged with uncertainty).  
+- The output should **always be displayed with a bounding box** if any anomaly is detected.  
+
+## **Instruction 4: Add Download Feature**
+- Implement functionality for users to **download the anomaly-marked output files**:  
+  - For **images**: downloadable `.jpg` or `.png` file with bounding box overlay.  
+  - For **videos**: downloadable `.mp4` with bounding boxes drawn frame-by-frame.  
+- Add a **Download button** in the UI under each detection result.  
+- Ensure downloaded files preserve the same anomaly metadata (confidence, category, etc.) in filename or metadata.  
+
+## **Instruction 5: Logging & Transparency**
+- Maintain a log of all detections with:
+  - Timestamp  
+  - Anomaly type  
+  - Confidence score  
+  - Link to the rendered anomaly-marked file  
+- This log should also be downloadable as `.csv` for record-keeping.  
+
+# **Notes**
+- Must prioritize **stability + reliability** over speed.  
+- System should **never suppress detections silently**. If uncertain, show low-confidence detections instead of ignoring them.  
+- Testing: Use the same burglary/intrusion sample multiple times and verify **consistent results + proper rendering + downloadable outputs**.  

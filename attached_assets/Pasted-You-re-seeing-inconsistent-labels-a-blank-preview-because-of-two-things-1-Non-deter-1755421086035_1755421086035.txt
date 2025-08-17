@@ -1,0 +1,225 @@
+You’re seeing **inconsistent labels** + a **blank preview** because of two things:
+
+1. **Non-deterministic inference** (random crops/frame picks, model not in eval mode, TimeSformer on single images)
+2. **Frontend preview URL** is not valid (server returns a file path or wrong MIME; React loses the Blob URL)
+
+Here’s a concrete “fix pack” you can drop in.
+
+---
+
+# 1) Make inference deterministic + sane
+
+### FastAPI (Python) — load once, freeze randomness, stable frame sampling
+
+```python
+# pip install torch torchvision transformers decord ultralytics opencv-python pillow python-multipart
+import os, io, hashlib, base64, cv2, torch
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse
+from ultralytics import YOLO
+from transformers import AutoModelForVideoClassification, AutoProcessor
+from decord import VideoReader, cpu
+
+app = FastAPI()
+
+# ---- Determinism
+torch.set_grad_enabled(False)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.manual_seed(0)
+
+# ---- Models (cache once)
+DET_MODEL_NAME = "yolov10n.pt"  # or yolov8n.pt as fallback
+detector = YOLO(DET_MODEL_NAME)
+
+TS_ID = "facebook/timesformer-base-finetuned-k400"  # swap if you’ve fine-tuned
+ts_model = AutoModelForVideoClassification.from_pretrained(TS_ID)
+ts_proc  = AutoProcessor.from_pretrained(TS_ID)
+ts_model.eval()
+
+ANOM_THRESH = 0.75
+DET_CONF    = 0.25
+DET_IOU     = 0.45
+
+def stable_indices(n_frames, want=16, seed=0):
+    if n_frames <= 0: return []
+    if n_frames <= want: return list(range(0, n_frames))
+    rng = torch.Generator().manual_seed(seed)
+    idx = torch.linspace(0, n_frames-1, steps=want).round().long()
+    return idx.tolist()
+
+def draw_boxes(img, detections, label_prefix=None):
+    for (x1,y1,x2,y2,lab,conf) in detections:
+        cv2.rectangle(img,(x1,y1),(x2,y2),(0,0,255),2)
+        tag = f"{lab} {conf:.0%}" if lab else f"{conf:.0%}"
+        if label_prefix: tag = f"{label_prefix}: {tag}"
+        cv2.putText(img, tag, (x1, max(10,y1-8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6,(0,0,255),2)
+    return img
+
+def encode_image(img_bgr):
+    ok, buf = cv2.imencode(".jpg", img_bgr)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("utf-8") if ok else None
+
+@app.post("/analyze")
+async def analyze(file: UploadFile = File(...)):
+    blob = await file.read()
+    sha = int.from_bytes(hashlib.sha256(blob).digest()[:4], "big")  # stable seed from content
+
+    # Try treat as image first
+    img = cv2.imdecode(np.frombuffer(blob, dtype=np.uint8), cv2.IMREAD_COLOR)
+    is_image = img is not None
+    detections = []
+    ts_label = None; ts_conf = 0.0
+
+    if is_image:
+        # ---- YOLO for objects (weapons/person/knife/gun/flashlight depends on model)
+        y = detector.predict(source=img, conf=DET_CONF, iou=DET_IOU, verbose=False)[0]
+        for b, c, p in zip(y.boxes.xyxy.cpu().numpy(), y.boxes.cls.cpu().numpy(), y.boxes.conf.cpu().numpy()):
+            x1,y1,x2,y2 = map(int, b)
+            label = y.names[int(c)]
+            detections.append((x1,y1,x2,y2,label,float(p)))
+
+        # (Optional) simple action proxy: image ⇒ replicate to 16 frames for TimeSformer
+        import numpy as np
+        frames = [img[:,:,::-1]]*16  # RGB
+        proc = ts_proc(videos=[frames], return_tensors="pt")
+        out  = ts_model(**proc)
+        probs = out.logits.softmax(-1).squeeze()
+        ts_idx = int(probs.argmax().item()); ts_conf = float(probs.max().item())
+        ts_label = ts_model.config.id2label.get(ts_idx, "unknown")
+
+        # ---- Fusion (example rules)
+        weapon = any(lab.lower() in {"gun","knife","pistol","revolver","rifle","machete","weapon"} for *_,lab,_ in detections)
+        final_label = "Normal"
+        severity = "low"
+        conf = max([p for *_,p in detections]+[ts_conf] or [0.0])
+
+        if weapon:
+            final_label, severity = "Weapon detected", "critical"
+        elif "fight" in (ts_label or "").lower():
+            final_label, severity = "Fighting", "high"
+        elif "loiter" in (ts_label or "").lower():
+            final_label, severity = "Loitering", "low"
+
+        annotated = draw_boxes(img.copy(), detections, label_prefix=final_label)
+        return JSONResponse({
+            "file": file.filename,
+            "final": {"label": final_label, "severity": severity, "confidence": round(conf,3)},
+            "yolo": [{"box":[x1,y1,x2,y2],"label":lab,"confidence":round(p,3)} for (x1,y1,x2,y2,lab,p) in detections],
+            "timesformer": {"label": ts_label, "confidence": round(ts_conf,3)},
+            "annotated_image": encode_image(annotated)  # <-- base64 data URL for React <img src=...>
+        })
+
+    # ---- Video path
+    import numpy as np, tempfile
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+        tmp.write(blob); path = tmp.name
+
+    vr = VideoReader(path, ctx=cpu(0))
+    idx = stable_indices(len(vr), want=16, seed=sha)
+    frames = [vr[i].asnumpy() for i in idx]  # RGB
+    proc = ts_proc(videos=[frames], return_tensors="pt")
+    out  = ts_model(**proc)
+    probs = out.logits.softmax(-1).squeeze()
+    ts_idx = int(probs.argmax().item()); ts_conf = float(probs.max().item())
+    ts_label = ts_model.config.id2label.get(ts_idx, "unknown")
+
+    # run YOLO on middle frame for preview
+    mid = frames[len(frames)//2][:,:,::-1]  # BGR for cv2
+    y = detector.predict(source=mid, conf=DET_CONF, iou=DET_IOU, verbose=False)[0]
+    for b, c, p in zip(y.boxes.xyxy.cpu().numpy(), y.boxes.cls.cpu().numpy(), y.boxes.conf.cpu().numpy()):
+        x1,y1,x2,y2 = map(int, b); label = y.names[int(c)]
+        detections.append((x1,y1,x2,y2,label,float(p)))
+
+    weapon = any(lab.lower() in {"gun","knife","pistol","revolver","rifle","machete","weapon"} for *_,lab,_ in detections)
+    final_label, severity = ("Weapon detected","critical") if weapon else (ts_label or "Unknown","high" if "fight" in (ts_label or "").lower() else "low")
+    conf = max([p for *_,p in detections]+[ts_conf] or [0.0])
+    annotated = draw_boxes(mid.copy(), detections, label_prefix=final_label)
+
+    return JSONResponse({
+        "file": file.filename,
+        "final": {"label": final_label, "severity": severity, "confidence": round(conf,3)},
+        "yolo": [{"box":[x1,y1,x2,y2],"label":lab,"confidence":round(p,3)} for (x1,y1,x2,y2,lab,p) in detections],
+        "timesformer": {"label": ts_label, "confidence": round(ts_conf,3)},
+        "annotated_image": encode_image(annotated)
+    })
+```
+
+**Why this fixes variance**
+
+* `model.eval()`, cudnn deterministic, fixed seeds.
+* Stable 16-frame sampler using **content hash** → same image/video ⇒ same indices.
+* Disables random augmentations.
+* Caches models; no reload jitter.
+
+---
+
+# 2) Fix the blank preview in React
+
+The safest preview is to use the returned **data URL** (`annotated_image`) rather than a local server path.
+
+```tsx
+// After upload -> POST /analyze -> get JSON
+const [result, setResult] = useState<any>(null);
+
+async function onUpload(file: File) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/analyze", { method: "POST", body: fd });
+  const json = await res.json();
+  setResult(json);
+}
+
+{/* Preview */}
+{result?.annotated_image ? (
+  <img src={result.annotated_image} alt="Annotated" className="rounded-lg border" />
+) : (
+  <div className="h-48 w-full grid place-items-center bg-neutral-900 text-neutral-400">
+    <span>No preview</span>
+  </div>
+)}
+```
+
+**Common causes of your blank rectangle**
+
+* You were setting `src` to a **server filesystem path** (e.g., `/tmp/xyz.jpg`) — the browser can’t access it.
+* Or you revoked a Blob URL before render. Returning **base64** eliminates both.
+
+---
+
+# 3) Label stability & thresholding
+
+* Treat any prediction **< 0.50** as **“uncertain”** → display “No anomaly” AND **do not store an alert**.
+* Only create alerts when `final.confidence >= 0.75`.
+* Log **top-5 classes** from TimeSformer to a server log to debug label flips.
+
+---
+
+# 4) Fusion rules (consistent outputs)
+
+```python
+# Pseudocode used above:
+weapon = any(obj in WEAPON_SET for obj in yolo_labels)
+if weapon:               final="Weapon detected"; severity="critical"
+elif "fight" in ts:      final="Fighting";        severity="high"
+elif "loiter" in ts:     final="Loitering";       severity="low"
+else:                    final="Normal";          severity="low"
+```
+
+Keep the rules **static** until you calibrate; moving thresholds causes “same image → different label”.
+
+---
+
+# 5) Quick QA checklist
+
+* ✅ `model.eval()` and seeds set
+* ✅ 16 stable frames via content hash
+* ✅ Same conf thresholds every request
+* ✅ Return **base64 annotated image**
+* ✅ Frontend uses that base64 for `<img src>`
+* ✅ Only alerts when `conf ≥ 0.75`
+* ✅ Log version info (torch, transformers, ultralytics) and frame indices
+
+---
+
+If you want, I can also drop a tiny **Node/Express proxy** that forwards uploads to FastAPI and just relays the JSON, plus a **testing script** that posts the same image 10× and verifies identical outputs.

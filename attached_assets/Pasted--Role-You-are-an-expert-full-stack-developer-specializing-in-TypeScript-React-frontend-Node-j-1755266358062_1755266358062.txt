@@ -1,0 +1,59 @@
+# Role:
+You are an expert full-stack developer specializing in TypeScript, React (frontend), Node.js/Express (backend), WebSocket integration, and secure Federated Learning applications with privacy-preserving features. Your goal is to build a production-ready **Privacy-Preserving Federated Learning (PPFL) Surveillance System** with a dark mode toggle, working tab navigation, and real-time updates.
+
+# Objective:
+Implement a fully functional multi-tab PPFL surveillance system with:
+- Real-time anomaly detection dashboard
+- Anomaly timeline view
+- Device management panel
+- Privacy controls panel
+- Settings page with working dark mode toggle (persistent via localStorage)
+- Live WebSocket updates
+- GDPR/CCPA-compliant privacy & security features
+
+# Context:
+The system is used for monitoring security footage from multiple devices in real time, detecting anomalies while preserving user privacy through Differential Privacy, Homomorphic Encryption, and Federated Learning.
+
+# Instructions:
+
+## Instruction 1: Core Navigation & Tab Functionality
+- Implement a **navigation bar** with tabs: "Dashboard", "Anomaly Timeline", "Device Management", "Privacy Controls", and "Settings".
+- Ensure **React Router** (or equivalent) is used for smooth page navigation without reloads.
+- All tabs must load their respective component content dynamically without breaking routing.
+- Make sure **active tab highlighting** works.
+
+## Instruction 2: Dark Mode Toggle
+- On the **Settings** page, add a dark mode toggle switch.
+- Store dark mode preference in `localStorage` so it persists after page reload.
+- Use a **cybersecurity-themed UI** with glass morphism effects for both dark and light modes.
+
+## Instruction 3: Real-Time Updates & WebSocket Integration
+- Set up a WebSocket server in Node.js/Express to push:
+  - Anomaly detections (dashboard + timeline)
+  - Device status updates (device management)
+  - Privacy budget alerts (privacy controls)
+- Ensure frontend listens for these updates and dynamically refreshes relevant components without page reloads.
+
+## Instruction 4: Privacy & Security
+- Implement **Differential Privacy** with epsilon/delta budget tracking.
+- Add **Homomorphic Encryption** for data aggregation.
+- Ensure all uploads and WebSocket communications are **end-to-end encrypted**.
+- Include **audit logging** for all device and model updates.
+
+## Instruction 5: Federated Learning Support
+- Support FedProx, FedAvg, and SCAFFOLD algorithms.
+- Allow **20+ devices** to connect (scalable to 200+).
+- Enable asynchronous device participation (devices can join mid-round).
+- Provide a simulation mode for **50–200 devices** for testing.
+
+## Instruction 6: Performance & Monitoring
+- Show **model performance metrics** in real-time (accuracy, precision, recall).
+- Display privacy budget usage with alerts when limits are near.
+- Track **device health** and show offline/online status.
+
+# Notes:
+- Frontend: React + TypeScript + TailwindCSS (with glass morphism & responsive design)
+- Backend: Node.js/Express + WebSockets + TypeScript
+- Deployment: Docker for scaling
+- Use modular services for maintainability
+- Test all tabs before final deployment to ensure they work without errors.

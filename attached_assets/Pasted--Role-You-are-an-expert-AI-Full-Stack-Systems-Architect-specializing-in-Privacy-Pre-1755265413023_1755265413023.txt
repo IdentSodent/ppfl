@@ -1,0 +1,67 @@
+# **Role:**
+You are an expert **AI & Full-Stack Systems Architect** specializing in:
+- Privacy-Preserving Federated Learning (PPFL)
+- Distributed AI training on edge devices
+- Enterprise-grade security & compliance systems
+- React + TypeScript frontend design with cybersecurity-themed UI
+- Express.js + TypeScript backend development
+- TensorFlow.js-based anomaly detection pipelines
+- Real-time communication via WebSockets
+
+# **Objective:**
+Enhance and extend an existing PPFL surveillance system to improve:
+1. **Scalability** — handle more edge devices without latency
+2. **Privacy & Security** — strengthen encryption, DP parameters, and secure aggregation
+3. **User Experience** — improve dashboard interactivity, dark mode toggle in settings
+4. **FL Algorithm Efficiency** — optimize FedProx, FedAvg, and SCAFFOLD implementations
+5. **Model Performance** — better anomaly classification accuracy while maintaining privacy budgets
+
+# **Context:**
+The current system includes:
+- **Frontend:** React + TypeScript, responsive, cybersecurity aesthetics
+- **Backend:** Express.js + TypeScript, modular services
+- **AI:** TensorFlow.js anomaly detection (6 classes: violence, theft, trespassing, etc.)
+- **Federated Learning:** 20-round training, multiple algorithms, DP & secure aggregation
+- **Privacy Controls:** Epsilon/delta tracking, client-side preprocessing
+- **Real-time:** WebSocket updates every 5 seconds
+- **Data Processing:** Multi-format (image/video) up to 50MB
+- **Testing Environment:** 20 simulated edge devices
+
+# **Instructions:**
+
+## **Instruction 1 — Dashboard Enhancements**
+- Implement **Dark Mode toggle** in the settings page with persistent user preferences (localStorage).
+- Add **real-time visual model performance indicators** (accuracy, precision, recall) in dashboard graphs.
+- Create an **anomaly timeline view** showing past detections with thumbnails.
+
+## **Instruction 2 — Backend & FL Optimization**
+- Refactor the FL orchestration logic to support **asynchronous device participation** (devices can join mid-round).
+- Add **adaptive learning rate scheduling** for each FL round.
+- Implement **privacy budget alerts** in API responses when DP epsilon is close to the threshold.
+
+## **Instruction 3 — Security Hardening**
+- Upgrade secure aggregation to support **homomorphic encryption** in addition to current methods.
+- Implement **tamper detection logs** for incoming device updates.
+- Ensure **end-to-end encryption** for file uploads and WebSocket streams.
+
+## **Instruction 4 — Model Performance**
+- Integrate **on-device pre-filtering** to discard irrelevant frames before sending model updates.
+- Support **incremental learning** so devices can fine-tune without restarting the entire FL cycle.
+
+## **Instruction 5 — Deployment & Scalability**
+- Add **Docker-based deployment scripts** for easy scaling.
+- Introduce a **device simulation scaling slider** in the dev environment to quickly test 50–200 devices.
+
+# **Notes:**
+- Maintain **strict TypeScript typing** across frontend and backend.
+- Ensure **non-blocking WebSocket updates** to prevent dashboard lag.
+- All enhancements must maintain **data privacy compliance** (GDPR, CCPA).
+- Commit changes in **small, well-documented increments**.
+- Keep all UI elements consistent with cybersecurity theme.
+
+# **Deliverables:**
+1. Updated React frontend with dark mode and improved anomaly dashboard.
+2. Optimized Express.js backend with enhanced FL orchestration and DP alerts.
+3. Security-upgraded PPFL protocol with homomorphic encryption.
+4. Deployment-ready Docker configuration for scaling edge simulations.
+5. Documentation for new features and deployment steps.

@@ -1,0 +1,84 @@
+# **Role**
+You are an expert full-stack AI engineer tasked with building a **surveillance application** that integrates pretrained deep learning models for **object detection, temporal anomaly recognition, visualization, and alerting**.  
+
+# **Objective**
+Develop a **production-ready web application** that:
+1. Detects anomalies in surveillance video streams using **YOLOv10** (object detection) and **TimeSformer** (temporal video classification).  
+2. Highlights anomalies in the video/image outputs with **red bounding boxes and confidence labels**.  
+3. Fine-tunes the TimeSformer model to classify anomaly categories (weapons, suspicious behaviors, intrusions, etc.).  
+4. Provides an operator dashboard for real-time monitoring and alert management.  
+5. Supports Firebase for authentication, storage, and alert logging.  
+
+# **Context**
+- **Backend:** Python (FastAPI/Flask) hosted on Replit.  
+- **Frontend:** React + TailwindCSS + Shadcn UI.  
+- **Database & Auth:** Firebase (Firestore for logs, Firebase Auth for users, Firebase Cloud Storage for anomaly snapshots).  
+- **AI Models:**  
+  - **YOLOv10**: Detect and localize objects (guns, knives, intruders, torches, etc.) with bounding boxes.  
+  - **TimeSformer**: Fine-tuned to detect **temporal anomalies** (e.g., wielding a gun, loitering, running unnaturally fast).  
+- **Data Flow:**  
+  1. Input: Video feed or uploaded surveillance footage.  
+  2. YOLOv10 detects objects per frame.  
+  3. TimeSformer classifies temporal sequences into anomaly categories.  
+  4. Fusion engine combines YOLO object + TimeSformer activity for robust anomaly classification.  
+  5. Outputs: Annotated video/images, JSON logs, and Firebase alerts.  
+
+# **Instructions**
+
+## **Instruction 1: Model Integration**
+- Import pretrained YOLOv10 and TimeSformer models from Hugging Face or Torch Hub.  
+- Fine-tune TimeSformer on **labeled anomaly datasets** (weapons, intruders, suspicious activity, normal background).  
+- Maintain modular structure:
+  - `/models/yolo.py` → object detection.  
+  - `/models/timesformer.py` → temporal anomaly classification.  
+  - `/models/fusion.py` → combine predictions with confidence weighting.  
+
+## **Instruction 2: Anomaly Highlighting & Visualization**
+- For each anomaly:
+  - Draw a **red bounding box** around the detected object or person.  
+  - Add a label with **object/activity type + confidence score**.  
+- If YOLO detects a weapon and TimeSformer classifies “weapon use,” highlight the **person holding it** with the box.  
+- Outputs:
+  1. **Processed video feed** (real-time or uploaded).  
+  2. **Still snapshots (PNG/JPG)** saved in Firebase storage.  
+  3. **Structured JSON logs** with:  
+     ```json
+     {
+       "frame_id": 1021,
+       "timestamp": "2025-08-17T12:30:45Z",
+       "anomaly_type": "Gun detected, weapon use",
+       "confidence": 0.92,
+       "bounding_box": [120, 45, 250, 300]
+     }
+     ```
+
+## **Instruction 3: Backend (Python on Replit)**
+- Use **FastAPI** with endpoints:  
+  - `/upload` → accepts video/image input.  
+  - `/process` → runs YOLO + TimeSformer + fusion.  
+  - `/results` → returns annotated frames + JSON logs.  
+- Store processed anomaly results in **Firebase Firestore + Storage**.  
+- Expose WebSocket endpoint `/realtime` for live anomaly streaming.  
+
+## **Instruction 4: Frontend (React + TailwindCSS)**
+- Build a **dashboard** with tabs:  
+  - 📹 **Live Feed** → show processed video stream with bounding boxes.  
+  - 🖼 **Snapshots** → show anomaly snapshots with red boxes.  
+  - 📊 **Logs** → table view of JSON alerts (timestamp, anomaly type, confidence, bounding box).  
+  - ⚙️ **Settings** → threshold adjustments, user management.  
+- Enable **Firebase Auth** (roles: admin, operator).  
+- Push real-time updates using Firebase Cloud Messaging.  
+
+## **Instruction 5: Deployment & Scaling**
+- Host backend on **Replit server** with GPU acceleration (if available).  
+- Use Firebase as the centralized data pipeline (Auth + DB + Storage).  
+- Ensure logs are exportable to **CSV/JSON for audits**.  
+- Add **error handling** for video corruption, failed detection, or Firebase write issues.  
+
+# **Notes**
+- YOLOv10 = primary for **spatial object detection** (where is the weapon/person?).  
+- TimeSformer = primary for **temporal anomaly recognition** (what action is happening?).  
+- Bounding boxes + labels must appear on **both live and snapshot outputs**.  
+- System should support **both real-time streaming and batch uploads**.  
+- Always prioritize **low false negatives** (never miss a weapon detection).  
+
