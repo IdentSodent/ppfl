@@ -18,9 +18,9 @@ import path from "path";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import { z } from "zod";
-import FormData from 'form-data';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
 // AI Service Integration
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
 const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY || 'dev-key-12345';
@@ -53,8 +53,6 @@ async function checkAIServiceHealth(): Promise<boolean> {
 
 async function callTimeSformerService(file: Express.Multer.File): Promise<any> {
   try {
-    // Use a different approach to send files - for now, we'll use curl subprocess
-    // In production, you'd use a proper HTTP client library like axios
     const execAsync = promisify(exec);
 
     const curlCommand = `curl -X POST "${AI_SERVICE_URL}/predict" ` +
@@ -66,12 +64,6 @@ async function callTimeSformerService(file: Express.Multer.File): Promise<any> {
     const response = JSON.parse(stdout);
 
     return response;
-
-    if (!response.ok) {
-      throw new Error(`AI Service responded with status: ${response.status}`);
-    }
-
-    return await response.json();
   } catch (error) {
     console.error('TimeSformer service error:', error);
     throw error;
@@ -807,6 +799,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Start background services
+  const { FLOrchestrator } = await import('./services/flOrchestrator.js');
+  const { ClientSimulator } = await import('./services/clientSimulator.js');
+  
+  const flOrchestrator = new FLOrchestrator();
+  const clientSimulator = new ClientSimulator();
+  const anomalyService = { initialize: async () => console.log('Anomaly service initialized') };
+  
   try {
     await anomalyService.initialize();
     await flOrchestrator.startTraining();
@@ -989,11 +988,3 @@ async function analyzeFile(file: Express.Multer.File) {
     }
   };
 }
-
-import { FLOrchestrator } from './services/flOrchestrator';
-import { ClientSimulator } from './services/clientSimulator';
-
-// Initialize services
-const flOrchestrator = new FLOrchestrator();
-const clientSimulator = new ClientSimulator();
-const anomalyService = { initialize: async () => console.log('Anomaly service initialized') };
